@@ -1,32 +1,67 @@
-var exec = require('child_process').exec;
-var querystring = require('querystring');
+var fs = require('fs');
+var formidable = require('formidable');
 
-function start (response, postData) {
-	console.log('request handler "start" was called');
+function start(response) {
+    var body;
 
-	var body = '<html>' +
-	'<head>' +
-	'<meta http-equiv="Content-Type" content="text/html" charset="UTF-8">' +
-	'</head>' +
-	'<body>' +
-	'<form action="/upload" method="post">' +
-	'<textarea name="text" rows="20" cols="50"></textarea><br />' +
-	'<input type="submit" value="submit" />' +
-	'</form>' +
-	'</body>' +
-	'</html>';
+    console.log('request handler "start" was called');
 
-	response.writeHead(200, {"Content-Type": "text/html"});
-	response.write(body);
-	response.end();
+    body = '<html>' +
+    '<head>' +
+    '<meta http-equiv="Content-Type" content="text/html" charset="UTF-8">' +
+    '</head>' +
+    '<body>' +
+    '<form action="/upload" method="post" enctype="multipart/form-data">' +
+    '<input type="file" name="upload" multiple = "multiple" />' +
+    '<input type="submit" value="submit" value="upload" />' +
+    '</form>' +
+    '</body>' +
+    '</html>';
+
+    response.writeHead(200, {
+        'Content-Type': 'text/html'
+    });
+    response.write(body);
+    response.end();
 }
 
-function upload (response, postData) {
-	console.log('request handler "upload" was called');
-	response.writeHead(200, {"Content-Type": "text/plain"});
-	response.write("You's sent " + querystring.parse(postData).text);
-	response.end();
+function upload(response, request) {
+    var form;
+
+    console.log('request handler "upload" was called');
+    form = new formidable.IncomingForm();
+    console.log('about to parse');
+    form.parse(request, function (error, fields, files) {
+        console.log('parsing done');
+        fs.renameSync(files.upload.path, 'c:/temp/grunt.jpg');
+        response.writeHead(200, {
+            'Content-Type': 'text/html'
+        });
+        response.write('received image: <br />');
+        response.write('<img src="/show" />');
+        response.end();
+    });
+}
+
+function show(response) {
+    console.log('Request handler "show" was called');
+    fs.readFile('c:/temp/grunt.jpg', 'binary', function (error, file) {
+        if (error) {
+            response.writeHead(500, {
+                'Content-Type': 'text/plain'
+            });
+            response.write(error + '\n');
+            response.end();
+        } else {
+            response.writeHead(200, {
+                'Content-Type': 'image/png'
+            });
+            response.write(file, 'binary');
+            response.end();
+        }
+    });
 }
 
 exports.start = start;
 exports.upload = upload;
+exports.show = show;
